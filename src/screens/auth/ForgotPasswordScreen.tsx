@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TextField } from '@/components/TextField';
 import { Button } from '@/components/Button';
 import { sendReset } from '@/services/authService';
@@ -17,6 +18,7 @@ import type { AuthStackParamList } from '@/types';
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
 export function ForgotPasswordScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -48,35 +50,43 @@ export function ForgotPasswordScreen({ navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + theme.spacing.xxl },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.brand}>CheckInMap</Text>
         <Text style={styles.title}>Reset password</Text>
         <Text style={styles.subtitle}>
           We will email you a link to reset your password.
         </Text>
 
-        <View style={styles.form}>
-          <TextField
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholder="you@example.com"
-          />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-          {success ? (
-            <Text style={styles.success}>
-              If an account exists for that email, a reset link has been sent.
-            </Text>
-          ) : null}
-          <Button label="Send reset link" onPress={onSubmit} loading={loading} />
-          <Button
-            label="Back to login"
-            onPress={() => navigation.goBack()}
-            variant="secondary"
-            style={{ marginTop: theme.spacing.sm }}
-          />
-        </View>
+        <View style={{ height: theme.spacing.xl }} />
+
+        <TextField
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          placeholder="you@example.com"
+        />
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {success ? (
+          <Text style={styles.success}>
+            If an account exists for that email, a reset link has been sent.
+          </Text>
+        ) : null}
+        <Button label="Send reset link" onPress={onSubmit} loading={loading} size="lg" />
+        <Button
+          label="Back to sign in"
+          onPress={() => navigation.goBack()}
+          variant="ghost"
+          style={{ marginTop: theme.spacing.xs }}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -87,20 +97,27 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     padding: theme.spacing.lg,
-    justifyContent: 'center',
+  },
+  brand: {
+    fontSize: theme.font.small,
+    fontWeight: '600',
+    color: theme.colors.textMuted,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: theme.spacing.xxl,
   },
   title: {
-    fontSize: theme.font.title + 6,
+    fontSize: theme.font.display,
     fontWeight: '700',
     color: theme.colors.text,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: theme.font.body,
+    fontSize: theme.font.small,
     color: theme.colors.textMuted,
     marginTop: theme.spacing.xs,
-    marginBottom: theme.spacing.xl,
+    lineHeight: 20,
   },
-  form: { gap: 0 },
   error: {
     color: theme.colors.danger,
     fontSize: theme.font.small,

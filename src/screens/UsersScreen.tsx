@@ -10,16 +10,19 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/Avatar';
+import { Icon } from '@/components/Icon';
 import { useAuth } from '@/contexts/AuthContext';
 import { listUsers } from '@/services/userService';
-import { theme } from '@/theme';
+import { TAB_BAR_OVERLAY_SPACE, theme } from '@/theme';
 import type { DiscoverStackParamList, UserProfile } from '@/types';
 
 type Props = NativeStackScreenProps<DiscoverStackParamList, 'Users'>;
 
 export function UsersScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -42,70 +45,119 @@ export function UsersScreen({ navigation }: Props) {
     setRefreshing(false);
   };
 
+  const Header = () => (
+    <View style={[styles.header, { paddingTop: insets.top + theme.spacing.lg }]}>
+      <Text style={styles.eyebrow}>Discover</Text>
+      <Text style={styles.title}>People</Text>
+    </View>
+  );
+
   if (loading) {
     return (
-      <View style={styles.loader}>
-        <ActivityIndicator color={theme.colors.primary} />
+      <View style={styles.container}>
+        <Header />
+        <View style={styles.loader}>
+          <ActivityIndicator color={theme.colors.primary} />
+        </View>
       </View>
     );
   }
 
   return (
-    <FlatList
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      data={users}
-      keyExtractor={(item) => item.uid}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-      ItemSeparatorComponent={() => <View style={styles.sep} />}
-      ListEmptyComponent={
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>No other users yet</Text>
-          <Text style={styles.emptyBody}>
-            Invite a friend to sign up so you can follow each other.
-          </Text>
-        </View>
-      }
-      renderItem={({ item }) => (
-        <Pressable
-          style={styles.row}
-          onPress={() =>
-            navigation.navigate('UserProfile', { userId: item.uid })
-          }
-        >
-          <Avatar uri={item.photoURL} name={item.displayName} size={48} />
-          <View style={styles.rowText}>
-            <Text style={styles.name}>{item.displayName}</Text>
-            {item.location ? (
-              <Text style={styles.sub}>{item.location}</Text>
-            ) : (
-              <Text style={styles.sub}>
-                {item.followersCount} followers
-              </Text>
-            )}
+    <View style={styles.container}>
+      <FlatList
+        data={users}
+        keyExtractor={(item) => item.uid}
+        ListHeaderComponent={<Header />}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: TAB_BAR_OVERLAY_SPACE + theme.spacing.lg },
+        ]}
+        ItemSeparatorComponent={() => <View style={styles.sep} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>No other users yet</Text>
+            <Text style={styles.emptyBody}>
+              Invite a friend to join so you can follow each other.
+            </Text>
           </View>
-        </Pressable>
-      )}
-    />
+        }
+        renderItem={({ item }) => (
+          <Pressable
+            style={({ pressed }) => [
+              styles.row,
+              pressed && { backgroundColor: theme.colors.surfaceAlt },
+            ]}
+            onPress={() =>
+              navigation.navigate('UserProfile', { userId: item.uid })
+            }
+          >
+            <Avatar uri={item.photoURL} name={item.displayName} size={48} />
+            <View style={styles.rowText}>
+              <Text style={styles.name}>{item.displayName}</Text>
+              {item.location ? (
+                <Text style={styles.sub}>{item.location}</Text>
+              ) : (
+                <Text style={styles.sub}>{item.followersCount} followers</Text>
+              )}
+            </View>
+            <Icon name="chevron-right" size={18} color={theme.colors.textSubtle} />
+          </Pressable>
+        )}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.background },
   loader: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.background,
   },
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: theme.spacing.md, flexGrow: 1 },
+  content: {
+    paddingHorizontal: theme.spacing.lg,
+    flexGrow: 1,
+  },
+  header: {
+    paddingBottom: theme.spacing.lg,
+  },
+  eyebrow: {
+    fontSize: theme.font.tiny,
+    color: theme.colors.textMuted,
+    fontWeight: '500',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  title: {
+    fontSize: theme.font.display,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginTop: 4,
+    letterSpacing: -0.5,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm + 2,
-    paddingHorizontal: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.sm + 4,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.md,
+  },
+  sep: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: theme.spacing.xs,
+    marginLeft: 64,
   },
   rowText: { marginLeft: theme.spacing.md, flex: 1 },
   name: {
@@ -118,22 +170,22 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     marginTop: 2,
   },
-  sep: { height: 1, backgroundColor: theme.colors.border, marginLeft: 64 },
   empty: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: theme.spacing.xl,
+    minHeight: 300,
   },
   emptyTitle: {
-    fontSize: theme.font.heading,
-    fontWeight: '700',
+    fontSize: theme.font.body,
+    fontWeight: '600',
     color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
   },
   emptyBody: {
     fontSize: theme.font.small,
     color: theme.colors.textMuted,
     textAlign: 'center',
-    marginTop: theme.spacing.sm,
   },
 });

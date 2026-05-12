@@ -10,17 +10,19 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/authService';
-import { theme } from '@/theme';
+import { TAB_BAR_OVERLAY_SPACE, theme } from '@/theme';
 import type { ProfileStackParamList } from '@/types';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'MyProfile'>;
 
 export function MyProfileScreen({ navigation }: Props) {
   const { profile, refreshProfile } = useAuth();
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = React.useState(false);
 
   useFocusEffect(
@@ -44,69 +46,96 @@ export function MyProfileScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      <View style={styles.header}>
-        <Avatar uri={profile.photoURL} name={profile.displayName} size={96} />
-        <Text style={styles.name}>{profile.displayName}</Text>
-        <Text style={styles.email}>{profile.email}</Text>
-        {profile.location ? (
-          <Text style={styles.location}>{profile.location}</Text>
-        ) : null}
-      </View>
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: insets.top + theme.spacing.lg,
+            paddingBottom: TAB_BAR_OVERLAY_SPACE + theme.spacing.lg,
+          },
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.eyebrow}>Profile</Text>
 
-      <View style={styles.statsRow}>
-        <Pressable
-          style={styles.stat}
-          onPress={() =>
-            navigation.navigate('FollowList', {
-              userId: profile.uid,
-              mode: 'followers',
-            })
-          }
-        >
-          <Text style={styles.statNumber}>{profile.followersCount}</Text>
-          <Text style={styles.statLabel}>Followers</Text>
-        </Pressable>
-        <View style={styles.statDivider} />
-        <Pressable
-          style={styles.stat}
-          onPress={() =>
-            navigation.navigate('FollowList', {
-              userId: profile.uid,
-              mode: 'following',
-            })
-          }
-        >
-          <Text style={styles.statNumber}>{profile.followingCount}</Text>
-          <Text style={styles.statLabel}>Following</Text>
-        </Pressable>
-      </View>
-
-      {profile.bio ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.bio}>{profile.bio}</Text>
+        <View style={styles.identity}>
+          <Avatar uri={profile.photoURL} name={profile.displayName} size={88} />
+          <Text style={styles.name}>{profile.displayName}</Text>
+          <Text style={styles.email}>{profile.email}</Text>
+          {profile.location ? (
+            <Text style={styles.location}>{profile.location}</Text>
+          ) : null}
         </View>
-      ) : null}
 
-      <Button
-        label="Edit profile"
-        onPress={() => navigation.navigate('EditProfile')}
-        style={{ marginTop: theme.spacing.lg }}
-      />
-      <Button
-        label="Sign out"
-        variant="secondary"
-        onPress={() => signOut()}
-        style={{ marginTop: theme.spacing.sm }}
-      />
-    </ScrollView>
+        <View style={styles.statsCard}>
+          <Pressable
+            style={styles.stat}
+            onPress={() =>
+              navigation.navigate('FollowList', {
+                userId: profile.uid,
+                mode: 'followers',
+              })
+            }
+          >
+            <Text style={styles.statNumber}>{profile.followersCount}</Text>
+            <Text style={styles.statLabel}>Followers</Text>
+          </Pressable>
+          <View style={styles.statDivider} />
+          <Pressable
+            style={styles.stat}
+            onPress={() =>
+              navigation.navigate('FollowList', {
+                userId: profile.uid,
+                mode: 'following',
+              })
+            }
+          >
+            <Text style={styles.statNumber}>{profile.followingCount}</Text>
+            <Text style={styles.statLabel}>Following</Text>
+          </Pressable>
+          <View style={styles.statDivider} />
+          <View style={styles.stat}>
+            <Text style={styles.statNumber}>0</Text>
+            <Text style={styles.statLabel}>Check-ins</Text>
+          </View>
+        </View>
+
+        {profile.bio ? (
+          <View style={styles.aboutCard}>
+            <Text style={styles.sectionLabel}>About</Text>
+            <Text style={styles.bio}>{profile.bio}</Text>
+          </View>
+        ) : (
+          <View style={styles.aboutCard}>
+            <Text style={styles.sectionLabel}>About</Text>
+            <Text style={styles.bioMuted}>
+              No bio yet. Tap edit to add one.
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.actions}>
+          <Button
+            label="Edit profile"
+            onPress={() => navigation.navigate('EditProfile')}
+          />
+          <Button
+            label="Sign out"
+            variant="secondary"
+            onPress={() => signOut()}
+            style={{ marginTop: theme.spacing.sm }}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -115,40 +144,54 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: theme.colors.background,
   },
   container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: theme.spacing.lg },
-  header: { alignItems: 'center' },
+  content: {
+    paddingHorizontal: theme.spacing.lg,
+  },
+  eyebrow: {
+    fontSize: theme.font.tiny,
+    color: theme.colors.textMuted,
+    fontWeight: '500',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: theme.spacing.lg,
+  },
+  identity: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
   name: {
     fontSize: theme.font.title,
     fontWeight: '700',
     color: theme.colors.text,
     marginTop: theme.spacing.md,
+    letterSpacing: -0.3,
   },
   email: {
     fontSize: theme.font.small,
     color: theme.colors.textMuted,
-    marginTop: theme.spacing.xs,
+    marginTop: 2,
   },
   location: {
     fontSize: theme.font.small,
     color: theme.colors.textMuted,
     marginTop: theme.spacing.xs,
   },
-  statsRow: {
+  statsCard: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
-    marginTop: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  stat: {
-    flex: 1,
-    alignItems: 'center',
-  },
+  stat: { flex: 1, alignItems: 'center' },
   statDivider: {
     width: 1,
     backgroundColor: theme.colors.border,
+    marginVertical: 8,
   },
   statNumber: {
     fontSize: theme.font.heading,
@@ -156,21 +199,38 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   statLabel: {
-    fontSize: theme.font.small,
+    fontSize: theme.font.tiny,
     color: theme.colors.textMuted,
     marginTop: 2,
+    fontWeight: '500',
   },
-  section: { marginTop: theme.spacing.lg },
-  sectionTitle: {
-    fontSize: theme.font.small,
-    fontWeight: '700',
+  sectionLabel: {
+    fontSize: theme.font.tiny,
+    fontWeight: '500',
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
+    letterSpacing: 0.4,
     marginBottom: theme.spacing.sm,
+  },
+  aboutCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: theme.spacing.md,
   },
   bio: {
     fontSize: theme.font.body,
     color: theme.colors.text,
     lineHeight: 22,
+  },
+  bioMuted: {
+    fontSize: theme.font.small,
+    color: theme.colors.textSubtle,
+    lineHeight: 20,
+  },
+  actions: {
+    marginTop: theme.spacing.lg,
   },
 });

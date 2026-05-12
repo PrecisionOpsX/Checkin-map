@@ -11,10 +11,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserProfile } from '@/services/userService';
 import { follow, isFollowing, unfollow } from '@/services/followService';
-import { theme } from '@/theme';
+import { TAB_BAR_OVERLAY_SPACE, theme } from '@/theme';
 import type { ProfileStackParamList, UserProfile } from '@/types';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'UserProfile'>;
@@ -71,16 +72,22 @@ export function UserProfileScreen({ route, navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.loader}>
-        <ActivityIndicator color={theme.colors.primary} />
+      <View style={styles.container}>
+        <ScreenHeader title="Profile" onBack={() => navigation.goBack()} />
+        <View style={styles.loader}>
+          <ActivityIndicator color={theme.colors.primary} />
+        </View>
       </View>
     );
   }
 
   if (!profile) {
     return (
-      <View style={styles.loader}>
-        <Text style={styles.muted}>User not found.</Text>
+      <View style={styles.container}>
+        <ScreenHeader title="Profile" onBack={() => navigation.goBack()} />
+        <View style={styles.loader}>
+          <Text style={styles.muted}>User not found.</Text>
+        </View>
       </View>
     );
   }
@@ -88,60 +95,70 @@ export function UserProfileScreen({ route, navigation }: Props) {
   const isSelf = user?.uid === profile.uid;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Avatar uri={profile.photoURL} name={profile.displayName} size={96} />
-        <Text style={styles.name}>{profile.displayName}</Text>
-        {profile.location ? (
-          <Text style={styles.location}>{profile.location}</Text>
-        ) : null}
-      </View>
-
-      <View style={styles.statsRow}>
-        <Pressable
-          style={styles.stat}
-          onPress={() =>
-            (navigation as any).navigate('FollowList', {
-              userId: profile.uid,
-              mode: 'followers',
-            })
-          }
-        >
-          <Text style={styles.statNumber}>{profile.followersCount}</Text>
-          <Text style={styles.statLabel}>Followers</Text>
-        </Pressable>
-        <View style={styles.statDivider} />
-        <Pressable
-          style={styles.stat}
-          onPress={() =>
-            (navigation as any).navigate('FollowList', {
-              userId: profile.uid,
-              mode: 'following',
-            })
-          }
-        >
-          <Text style={styles.statNumber}>{profile.followingCount}</Text>
-          <Text style={styles.statLabel}>Following</Text>
-        </Pressable>
-      </View>
-
-      {profile.bio ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.bio}>{profile.bio}</Text>
+    <View style={styles.container}>
+      <ScreenHeader title="Profile" onBack={() => navigation.goBack()} />
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: TAB_BAR_OVERLAY_SPACE + theme.spacing.lg },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.identity}>
+          <Avatar uri={profile.photoURL} name={profile.displayName} size={88} />
+          <Text style={styles.name}>{profile.displayName}</Text>
+          {profile.location ? (
+            <Text style={styles.location}>{profile.location}</Text>
+          ) : null}
         </View>
-      ) : null}
 
-      {!isSelf ? (
-        <Button
-          label={following ? 'Unfollow' : 'Follow'}
-          onPress={toggleFollow}
-          loading={busy}
-          variant={following ? 'secondary' : 'primary'}
-          style={{ marginTop: theme.spacing.lg }}
-        />
-      ) : null}
-    </ScrollView>
+        <View style={styles.statsCard}>
+          <Pressable
+            style={styles.stat}
+            onPress={() =>
+              (navigation as any).navigate('FollowList', {
+                userId: profile.uid,
+                mode: 'followers',
+              })
+            }
+          >
+            <Text style={styles.statNumber}>{profile.followersCount}</Text>
+            <Text style={styles.statLabel}>Followers</Text>
+          </Pressable>
+          <View style={styles.statDivider} />
+          <Pressable
+            style={styles.stat}
+            onPress={() =>
+              (navigation as any).navigate('FollowList', {
+                userId: profile.uid,
+                mode: 'following',
+              })
+            }
+          >
+            <Text style={styles.statNumber}>{profile.followingCount}</Text>
+            <Text style={styles.statLabel}>Following</Text>
+          </Pressable>
+        </View>
+
+        {profile.bio ? (
+          <View style={styles.aboutCard}>
+            <Text style={styles.sectionLabel}>About</Text>
+            <Text style={styles.bio}>{profile.bio}</Text>
+          </View>
+        ) : null}
+
+        {!isSelf ? (
+          <View style={styles.actions}>
+            <Button
+              label={following ? 'Following' : 'Follow'}
+              onPress={toggleFollow}
+              loading={busy}
+              variant={following ? 'secondary' : 'primary'}
+            />
+          </View>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -150,53 +167,76 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: theme.colors.background,
   },
   container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: theme.spacing.lg },
-  header: { alignItems: 'center' },
+  content: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
+  },
+  identity: {
+    alignItems: 'center',
+    marginVertical: theme.spacing.lg,
+  },
   name: {
     fontSize: theme.font.title,
     fontWeight: '700',
     color: theme.colors.text,
     marginTop: theme.spacing.md,
+    letterSpacing: -0.3,
   },
   location: {
     fontSize: theme.font.small,
     color: theme.colors.textMuted,
     marginTop: theme.spacing.xs,
   },
-  statsRow: {
+  statsCard: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
-    marginTop: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   stat: { flex: 1, alignItems: 'center' },
-  statDivider: { width: 1, backgroundColor: theme.colors.border },
+  statDivider: {
+    width: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: 8,
+  },
   statNumber: {
     fontSize: theme.font.heading,
     fontWeight: '700',
     color: theme.colors.text,
   },
   statLabel: {
-    fontSize: theme.font.small,
+    fontSize: theme.font.tiny,
     color: theme.colors.textMuted,
     marginTop: 2,
+    fontWeight: '500',
   },
-  section: { marginTop: theme.spacing.lg },
-  sectionTitle: {
-    fontSize: theme.font.small,
-    fontWeight: '700',
+  sectionLabel: {
+    fontSize: theme.font.tiny,
+    fontWeight: '500',
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
+    letterSpacing: 0.4,
     marginBottom: theme.spacing.sm,
+  },
+  aboutCard: {
+    marginTop: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   bio: {
     fontSize: theme.font.body,
     color: theme.colors.text,
     lineHeight: 22,
+  },
+  actions: {
+    marginTop: theme.spacing.lg,
   },
   muted: { color: theme.colors.textMuted },
 });

@@ -22,14 +22,14 @@ export function Avatar({ uri, name, size = 64 }: AvatarProps) {
 
   return (
     <View style={[styles.fallback, style]}>
-      <Text style={[styles.initial, { fontSize: size * 0.4 }]}>{initial}</Text>
+      <Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   img: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.surfaceAlt,
   },
   fallback: {
     backgroundColor: theme.colors.primary,
@@ -38,6 +38,7 @@ const styles = StyleSheet.create({
   },
   initial: {
     color: '#ffffff',
-    fontWeight: '700',
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 });

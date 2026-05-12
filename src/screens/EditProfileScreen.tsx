@@ -14,6 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/contexts/AuthContext';
 import { updateUserProfile } from '@/services/userService';
@@ -22,7 +23,7 @@ import {
   isStorageConfigured,
   uploadAvatar,
 } from '@/services/storageService';
-import { theme } from '@/theme';
+import { TAB_BAR_OVERLAY_SPACE, theme } from '@/theme';
 import type { ProfileStackParamList } from '@/types';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'EditProfile'>;
@@ -46,7 +47,6 @@ export function EditProfileScreen({ navigation }: Props) {
       );
       return;
     }
-
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert(
@@ -110,9 +110,17 @@ export function EditProfileScreen({ navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScreenHeader title="Edit profile" onBack={() => navigation.goBack()} />
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: TAB_BAR_OVERLAY_SPACE + theme.spacing.lg },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.avatarBlock}>
-          <Avatar uri={photoURL} name={displayName} size={120} />
+          <Avatar uri={photoURL} name={displayName} size={96} />
           {storageEnabled ? (
             <Pressable onPress={pickImage} disabled={uploading} style={styles.avatarBtn}>
               {uploading ? (
@@ -125,40 +133,44 @@ export function EditProfileScreen({ navigation }: Props) {
             </Pressable>
           ) : (
             <Text style={styles.avatarDisabled}>
-              Photo upload disabled (Storage not configured)
+              Photo upload disabled
             </Text>
           )}
         </View>
 
-        <TextField
-          label="Display name"
-          value={displayName}
-          onChangeText={setDisplayName}
-          placeholder="Your name"
-        />
-        <TextField
-          label="Bio"
-          value={bio}
-          onChangeText={setBio}
-          placeholder="Tell others about yourself"
-          multiline
-          numberOfLines={4}
-          style={{ minHeight: 96, textAlignVertical: 'top' }}
-        />
-        <TextField
-          label="Location"
-          value={location}
-          onChangeText={setLocation}
-          placeholder="City, country"
-        />
+        <View style={styles.card}>
+          <TextField
+            label="Display name"
+            value={displayName}
+            onChangeText={setDisplayName}
+            placeholder="Your name"
+          />
+          <TextField
+            label="Bio"
+            value={bio}
+            onChangeText={setBio}
+            placeholder="Tell others about yourself"
+            multiline
+            numberOfLines={4}
+            style={{ minHeight: 96, textAlignVertical: 'top' }}
+          />
+          <TextField
+            label="Location"
+            value={location}
+            onChangeText={setLocation}
+            placeholder="City, country"
+          />
+        </View>
 
-        <Button label="Save changes" onPress={onSave} loading={saving} />
-        <Button
-          label="Cancel"
-          variant="secondary"
-          onPress={() => navigation.goBack()}
-          style={{ marginTop: theme.spacing.sm }}
-        />
+        <View style={styles.actions}>
+          <Button label="Save changes" onPress={onSave} loading={saving} />
+          <Button
+            label="Cancel"
+            variant="ghost"
+            onPress={() => navigation.goBack()}
+            style={{ marginTop: theme.spacing.xs }}
+          />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -166,7 +178,10 @@ export function EditProfileScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: theme.spacing.lg },
+  content: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.sm,
+  },
   avatarBlock: {
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
@@ -174,7 +189,7 @@ const styles = StyleSheet.create({
   avatarBtn: {
     marginTop: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
   },
   avatarBtnText: {
     color: theme.colors.primary,
@@ -183,8 +198,17 @@ const styles = StyleSheet.create({
   },
   avatarDisabled: {
     marginTop: theme.spacing.sm,
-    color: theme.colors.textMuted,
+    color: theme.colors.textSubtle,
     fontSize: theme.font.tiny,
-    fontStyle: 'italic',
+  },
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  actions: {
+    marginTop: theme.spacing.lg,
   },
 });

@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "CheckInMap",
+    "slug": "checkin-map",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.checkinmap.app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Allow access to photo library to set your profile picture.",
+        "NSCameraUsageDescription": "Allow access to camera to take a profile picture."
+      }
+    },
+    "android": {
+      "package": "com.checkinmap.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow CheckInMap to access your photos to set your profile picture."
+        }
+      ]
+    ]
+  }
+}

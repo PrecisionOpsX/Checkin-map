@@ -14,7 +14,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
+import { DateField } from '@/components/DateField';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { SelectField } from '@/components/SelectField';
 import { TextField } from '@/components/TextField';
 import { useAuth } from '@/contexts/AuthContext';
 import { updateUserProfile } from '@/services/userService';
@@ -24,6 +26,8 @@ import {
   uploadAvatar,
 } from '@/services/storageService';
 import { TAB_BAR_OVERLAY_SPACE, theme } from '@/theme';
+import { SKILL_LEVELS, SkillLevel } from '@/types';
+import { computeAge } from '@/utils/dates';
 import type { ProfileStackParamList } from '@/types';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'EditProfile'>;
@@ -34,6 +38,11 @@ export function EditProfileScreen({ navigation }: Props) {
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [location, setLocation] = useState(profile?.location ?? '');
   const [photoURL, setPhotoURL] = useState<string | null>(profile?.photoURL ?? null);
+  const [birthday, setBirthday] = useState<string | null>(profile?.birthday ?? null);
+  const [skillLevel, setSkillLevel] = useState<SkillLevel | null>(
+    profile?.skillLevel ?? null
+  );
+  const [errors, setErrors] = useState<{ birthday?: string; skillLevel?: string }>({});
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -43,7 +52,7 @@ export function EditProfileScreen({ navigation }: Props) {
     if (!storageEnabled) {
       Alert.alert(
         'Photo upload disabled',
-        'Firebase Storage is not configured for this build. You can still edit your name, bio, and location.'
+        'Firebase Storage is not configured for this build.'
       );
       return;
     }
@@ -88,6 +97,17 @@ export function EditProfileScreen({ navigation }: Props) {
       Alert.alert('Required', 'Display name cannot be empty.');
       return;
     }
+
+    const nextErrors: typeof errors = {};
+    if (!birthday) nextErrors.birthday = 'Required';
+    const age = computeAge(birthday);
+    if (birthday && (age == null || age < 13)) {
+      nextErrors.birthday = 'You must be at least 13.';
+    }
+    if (!skillLevel) nextErrors.skillLevel = 'Required';
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) return;
+
     setSaving(true);
     try {
       await updateUserProfile(user.uid, {
@@ -95,6 +115,8 @@ export function EditProfileScreen({ navigation }: Props) {
         bio: bio.trim(),
         location: location.trim(),
         photoURL,
+        birthday,
+        skillLevel,
       });
       await refreshProfile();
       navigation.goBack();
@@ -132,12 +154,38 @@ export function EditProfileScreen({ navigation }: Props) {
               )}
             </Pressable>
           ) : (
-            <Text style={styles.avatarDisabled}>
-              Photo upload disabled
-            </Text>
+            <Text style={styles.avatarDisabled}>Photo upload disabled</Text>
           )}
         </View>
 
+        <Text style={styles.sectionLabel}>Required</Text>
+        <View style={styles.card}>
+          <DateField
+            label="Birthday"
+            placeholder="Select your birthday"
+            value={birthday}
+            onChange={(v) => {
+              setBirthday(v);
+              setErrors((e) => ({ ...e, birthday: undefined }));
+            }}
+            error={errors.birthday}
+            minimumYear={1925}
+            maximumYear={new Date().getFullYear()}
+          />
+          <SelectField<SkillLevel>
+            label="Skill level"
+            placeholder="Pick one"
+            value={skillLevel}
+            onChange={(v) => {
+              setSkillLevel(v);
+              setErrors((e) => ({ ...e, skillLevel: undefined }));
+            }}
+            options={SKILL_LEVELS.map((s) => ({ value: s.value, label: s.label }))}
+            error={errors.skillLevel}
+          />
+        </View>
+
+        <Text style={styles.sectionLabel}>Profile</Text>
         <View style={styles.card}>
           <TextField
             label="Display name"
@@ -201,14 +249,24 @@ const styles = StyleSheet.create({
     color: theme.colors.textSubtle,
     fontSize: theme.font.tiny,
   },
+  sectionLabel: {
+    fontSize: theme.font.tiny,
+    fontWeight: '500',
+    color: theme.colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+  },
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
     padding: theme.spacing.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    marginBottom: theme.spacing.md,
   },
   actions: {
-    marginTop: theme.spacing.lg,
+    marginTop: theme.spacing.md,
   },
 });

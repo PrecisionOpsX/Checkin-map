@@ -24,6 +24,8 @@ export async function signUp(
     bio: '',
     location: '',
     photoURL: null,
+    birthday: null,
+    skillLevel: null,
     followersCount: 0,
     followingCount: 0,
     createdAt: serverTimestamp(),

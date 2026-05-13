@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -13,27 +13,39 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
+import { SkillBadge } from '@/components/SkillBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/services/authService';
+import { listUserCheckinHistory } from '@/services/checkinService';
 import { TAB_BAR_OVERLAY_SPACE, theme } from '@/theme';
-import type { ProfileStackParamList } from '@/types';
+import { computeAge, formatRelative } from '@/utils/dates';
+import type { Checkin, ProfileStackParamList } from '@/types';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'MyProfile'>;
 
 export function MyProfileScreen({ navigation }: Props) {
   const { profile, refreshProfile } = useAuth();
   const insets = useSafeAreaInsets();
-  const [refreshing, setRefreshing] = React.useState(false);
+  const [history, setHistory] = useState<Checkin[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    await refreshProfile();
+    if (profile?.uid) {
+      const h = await listUserCheckinHistory(profile.uid, 10);
+      setHistory(h);
+    }
+  }, [profile?.uid]);
 
   useFocusEffect(
     useCallback(() => {
-      refreshProfile();
-    }, [])
+      load();
+    }, [load])
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await refreshProfile();
+    await load();
     setRefreshing(false);
   };
 
@@ -44,6 +56,8 @@ export function MyProfileScreen({ navigation }: Props) {
       </View>
     );
   }
+
+  const age = computeAge(profile.birthday);
 
   return (
     <View style={styles.container}>
@@ -69,10 +83,14 @@ export function MyProfileScreen({ navigation }: Props) {
         <View style={styles.identity}>
           <Avatar uri={profile.photoURL} name={profile.displayName} size={88} />
           <Text style={styles.name}>{profile.displayName}</Text>
-          <Text style={styles.email}>{profile.email}</Text>
-          {profile.location ? (
-            <Text style={styles.location}>{profile.location}</Text>
-          ) : null}
+          <View style={styles.metaRow}>
+            {age != null ? <Text style={styles.meta}>{age} years old</Text> : null}
+            {age != null && profile.location ? <Text style={styles.dot}>·</Text> : null}
+            {profile.location ? <Text style={styles.meta}>{profile.location}</Text> : null}
+          </View>
+          <View style={styles.skillRow}>
+            <SkillBadge value={profile.skillLevel} />
+          </View>
         </View>
 
         <View style={styles.statsCard}>
@@ -103,24 +121,47 @@ export function MyProfileScreen({ navigation }: Props) {
           </Pressable>
           <View style={styles.statDivider} />
           <View style={styles.stat}>
-            <Text style={styles.statNumber}>0</Text>
+            <Text style={styles.statNumber}>{history.length}</Text>
             <Text style={styles.statLabel}>Check-ins</Text>
           </View>
         </View>
 
         {profile.bio ? (
-          <View style={styles.aboutCard}>
+          <View style={styles.card}>
             <Text style={styles.sectionLabel}>About</Text>
             <Text style={styles.bio}>{profile.bio}</Text>
           </View>
-        ) : (
-          <View style={styles.aboutCard}>
-            <Text style={styles.sectionLabel}>About</Text>
-            <Text style={styles.bioMuted}>
-              No bio yet. Tap edit to add one.
+        ) : null}
+
+        <Text style={styles.sectionLabel}>Recent check-ins</Text>
+        <View style={styles.card}>
+          {history.length === 0 ? (
+            <Text style={styles.empty}>
+              No check-ins yet. Find a spot on the map and tap Check in.
             </Text>
-          </View>
-        )}
+          ) : (
+            history.map((c, i) => (
+              <Pressable
+                key={c.id}
+                onPress={() =>
+                  navigation.navigate('LocationDetail', { locationId: c.locationId })
+                }
+                style={[
+                  styles.checkinRow,
+                  i !== history.length - 1 && styles.checkinRowBorder,
+                ]}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.checkinName}>{c.locationName}</Text>
+                  <Text style={styles.checkinTime}>{formatRelative(c.checkedInAt)}</Text>
+                </View>
+                {c.checkedOutAt == null ? (
+                  <View style={styles.liveDot} />
+                ) : null}
+              </Pressable>
+            ))
+          )}
+        </View>
 
         <View style={styles.actions}>
           <Button
@@ -128,10 +169,16 @@ export function MyProfileScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('EditProfile')}
           />
           <Button
-            label="Sign out"
+            label="Choose app logo"
             variant="secondary"
-            onPress={() => signOut()}
+            onPress={() => navigation.navigate('LogoGallery')}
             style={{ marginTop: theme.spacing.sm }}
+          />
+          <Button
+            label="Sign out"
+            variant="ghost"
+            onPress={() => signOut()}
+            style={{ marginTop: theme.spacing.xs }}
           />
         </View>
       </ScrollView>
@@ -147,9 +194,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   container: { flex: 1, backgroundColor: theme.colors.background },
-  content: {
-    paddingHorizontal: theme.spacing.lg,
-  },
+  content: { paddingHorizontal: theme.spacing.lg },
   eyebrow: {
     fontSize: theme.font.tiny,
     color: theme.colors.textMuted,
@@ -169,15 +214,22 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     letterSpacing: -0.3,
   },
-  email: {
-    fontSize: theme.font.small,
-    color: theme.colors.textMuted,
-    marginTop: 2,
-  },
-  location: {
-    fontSize: theme.font.small,
-    color: theme.colors.textMuted,
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: theme.spacing.xs,
+  },
+  meta: {
+    fontSize: theme.font.small,
+    color: theme.colors.textMuted,
+  },
+  dot: {
+    fontSize: theme.font.small,
+    color: theme.colors.textMuted,
+    marginHorizontal: 6,
+  },
+  skillRow: {
+    marginTop: theme.spacing.sm,
   },
   statsCard: {
     flexDirection: 'row',
@@ -188,11 +240,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   stat: { flex: 1, alignItems: 'center' },
-  statDivider: {
-    width: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: 8,
-  },
+  statDivider: { width: 1, backgroundColor: theme.colors.border, marginVertical: 8 },
   statNumber: {
     fontSize: theme.font.heading,
     fontWeight: '700',
@@ -210,25 +258,52 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+    marginTop: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
   },
-  aboutCard: {
+  card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
-    padding: theme.spacing.lg,
+    padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginTop: theme.spacing.md,
   },
   bio: {
     fontSize: theme.font.body,
     color: theme.colors.text,
     lineHeight: 22,
   },
-  bioMuted: {
+  empty: {
     fontSize: theme.font.small,
     color: theme.colors.textSubtle,
     lineHeight: 20,
+    padding: theme.spacing.sm,
+  },
+  checkinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm + 2,
+    paddingHorizontal: theme.spacing.xs,
+  },
+  checkinRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  checkinName: {
+    fontSize: theme.font.body,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  checkinTime: {
+    fontSize: theme.font.small,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.success,
   },
   actions: {
     marginTop: theme.spacing.lg,

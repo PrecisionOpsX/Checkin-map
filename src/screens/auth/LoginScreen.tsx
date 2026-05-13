@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BrandHeader } from '@/components/BrandHeader';
 import { TextField } from '@/components/TextField';
 import { Button } from '@/components/Button';
 import { signIn } from '@/services/authService';
@@ -53,7 +54,9 @@ export function LoginScreen({ navigation }: Props) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.brand}>CheckInMap</Text>
+        <View style={styles.brand}>
+          <BrandHeader />
+        </View>
         <Text style={styles.title}>Sign in</Text>
         <Text style={styles.subtitle}>
           Welcome back. Please enter your details.
@@ -127,11 +130,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
   },
   brand: {
-    fontSize: theme.font.small,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
     marginBottom: theme.spacing.xxl,
   },
   title: {

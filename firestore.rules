@@ -24,5 +24,27 @@ service cloud.firestore {
         && request.resource.data.followerId != request.resource.data.followingId;
       allow delete: if isSignedIn() && resource.data.followerId == request.auth.uid;
     }
+
+    // Curated locations. For now they are seeded from the app's hard-coded
+    // sample data, but the schema is ready for the admin panel (M4).
+    match /locations/{locationId} {
+      allow read: if isSignedIn();
+      // Only the admin panel writes to this collection. End users cannot.
+      allow write: if false;
+    }
+
+    // GPS-verified check-ins. Users create their own and may only check
+    // themselves out.
+    match /checkins/{checkinId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.checkedOutAt == null;
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.locationId == resource.data.locationId;
+      allow delete: if false;
+    }
   }
 }

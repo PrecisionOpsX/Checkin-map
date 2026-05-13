@@ -12,11 +12,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Avatar } from '@/components/Avatar';
 import { Button } from '@/components/Button';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { SkillBadge } from '@/components/SkillBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserProfile } from '@/services/userService';
+import { listUserCheckinHistory } from '@/services/checkinService';
 import { follow, isFollowing, unfollow } from '@/services/followService';
 import { TAB_BAR_OVERLAY_SPACE, theme } from '@/theme';
-import type { ProfileStackParamList, UserProfile } from '@/types';
+import { computeAge, formatRelative } from '@/utils/dates';
+import type { Checkin, ProfileStackParamList, UserProfile } from '@/types';
 
 type Props = NativeStackScreenProps<ProfileStackParamList, 'UserProfile'>;
 
@@ -24,14 +27,19 @@ export function UserProfileScreen({ route, navigation }: Props) {
   const { userId } = route.params;
   const { user, refreshProfile } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [history, setHistory] = useState<Checkin[]>([]);
   const [following, setFollowing] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const p = await getUserProfile(userId);
+    const [p, h] = await Promise.all([
+      getUserProfile(userId),
+      listUserCheckinHistory(userId, 10),
+    ]);
     setProfile(p);
+    setHistory(h);
     if (user && user.uid !== userId) {
       const f = await isFollowing(user.uid, userId);
       setFollowing(f);
@@ -93,6 +101,7 @@ export function UserProfileScreen({ route, navigation }: Props) {
   }
 
   const isSelf = user?.uid === profile.uid;
+  const age = computeAge(profile.birthday);
 
   return (
     <View style={styles.container}>
@@ -107,9 +116,14 @@ export function UserProfileScreen({ route, navigation }: Props) {
         <View style={styles.identity}>
           <Avatar uri={profile.photoURL} name={profile.displayName} size={88} />
           <Text style={styles.name}>{profile.displayName}</Text>
-          {profile.location ? (
-            <Text style={styles.location}>{profile.location}</Text>
-          ) : null}
+          <View style={styles.metaRow}>
+            {age != null ? <Text style={styles.meta}>{age} years old</Text> : null}
+            {age != null && profile.location ? <Text style={styles.dot}>·</Text> : null}
+            {profile.location ? <Text style={styles.meta}>{profile.location}</Text> : null}
+          </View>
+          <View style={styles.skillRow}>
+            <SkillBadge value={profile.skillLevel} />
+          </View>
         </View>
 
         <View style={styles.statsCard}>
@@ -138,13 +152,48 @@ export function UserProfileScreen({ route, navigation }: Props) {
             <Text style={styles.statNumber}>{profile.followingCount}</Text>
             <Text style={styles.statLabel}>Following</Text>
           </Pressable>
+          <View style={styles.statDivider} />
+          <View style={styles.stat}>
+            <Text style={styles.statNumber}>{history.length}</Text>
+            <Text style={styles.statLabel}>Check-ins</Text>
+          </View>
         </View>
 
         {profile.bio ? (
-          <View style={styles.aboutCard}>
+          <View style={styles.card}>
             <Text style={styles.sectionLabel}>About</Text>
             <Text style={styles.bio}>{profile.bio}</Text>
           </View>
+        ) : null}
+
+        {history.length > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>Recent check-ins</Text>
+            <View style={styles.card}>
+              {history.map((c, i) => (
+                <Pressable
+                  key={c.id}
+                  onPress={() =>
+                    (navigation as any).navigate('LocationDetail', {
+                      locationId: c.locationId,
+                    })
+                  }
+                  style={[
+                    styles.checkinRow,
+                    i !== history.length - 1 && styles.checkinRowBorder,
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.checkinName}>{c.locationName}</Text>
+                    <Text style={styles.checkinTime}>
+                      {formatRelative(c.checkedInAt)}
+                    </Text>
+                  </View>
+                  {c.checkedOutAt == null ? <View style={styles.liveDot} /> : null}
+                </Pressable>
+              ))}
+            </View>
+          </>
         ) : null}
 
         {!isSelf ? (
@@ -184,11 +233,21 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     letterSpacing: -0.3,
   },
-  location: {
-    fontSize: theme.font.small,
-    color: theme.colors.textMuted,
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: theme.spacing.xs,
   },
+  meta: {
+    fontSize: theme.font.small,
+    color: theme.colors.textMuted,
+  },
+  dot: {
+    fontSize: theme.font.small,
+    color: theme.colors.textMuted,
+    marginHorizontal: 6,
+  },
+  skillRow: { marginTop: theme.spacing.sm },
   statsCard: {
     flexDirection: 'row',
     backgroundColor: theme.colors.surface,
@@ -198,11 +257,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   stat: { flex: 1, alignItems: 'center' },
-  statDivider: {
-    width: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: 8,
-  },
+  statDivider: { width: 1, backgroundColor: theme.colors.border, marginVertical: 8 },
   statNumber: {
     fontSize: theme.font.heading,
     fontWeight: '700',
@@ -220,13 +275,13 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+    marginTop: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
   },
-  aboutCard: {
-    marginTop: theme.spacing.md,
+  card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radius.lg,
-    padding: theme.spacing.lg,
+    padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -234,6 +289,32 @@ const styles = StyleSheet.create({
     fontSize: theme.font.body,
     color: theme.colors.text,
     lineHeight: 22,
+  },
+  checkinRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: theme.spacing.sm + 2,
+    paddingHorizontal: theme.spacing.xs,
+  },
+  checkinRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  checkinName: {
+    fontSize: theme.font.body,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  checkinTime: {
+    fontSize: theme.font.small,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.success,
   },
   actions: {
     marginTop: theme.spacing.lg,

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BrandHeader } from '@/components/BrandHeader';
 import { TextField } from '@/components/TextField';
 import { Button } from '@/components/Button';
 import { signUp } from '@/services/authService';
@@ -63,7 +64,9 @@ export function SignupScreen({ navigation }: Props) {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.brand}>CheckInMap</Text>
+        <View style={styles.brand}>
+          <BrandHeader />
+        </View>
         <Text style={styles.title}>Create account</Text>
         <Text style={styles.subtitle}>
           It takes about 20 seconds.
@@ -140,11 +143,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
   },
   brand: {
-    fontSize: theme.font.small,
-    fontWeight: '600',
-    color: theme.colors.textMuted,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
     marginBottom: theme.spacing.xxl,
   },
   title: {

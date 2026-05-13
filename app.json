@@ -2,7 +2,7 @@
   "expo": {
     "name": "CheckInMap",
     "slug": "checkin-map",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": ["**/*"],
@@ -11,11 +11,24 @@
       "bundleIdentifier": "com.checkinmap.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Allow access to photo library to set your profile picture.",
-        "NSCameraUsageDescription": "Allow access to camera to take a profile picture."
+        "NSCameraUsageDescription": "Allow access to camera to take a profile picture.",
+        "NSLocationWhenInUseUsageDescription": "CheckInMap uses your location to show nearby places and verify check-ins."
+      },
+      "config": {
+        "googleMapsApiKey": ""
       }
     },
     "android": {
-      "package": "com.checkinmap.app"
+      "package": "com.checkinmap.app",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": ""
+        }
+      }
     },
     "web": {
       "bundler": "metro"
@@ -25,6 +38,19 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow CheckInMap to access your photos to set your profile picture."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "CheckInMap uses your location to show nearby places and verify check-ins."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0f172a",
+          "resizeMode": "contain"
         }
       ]
     ]

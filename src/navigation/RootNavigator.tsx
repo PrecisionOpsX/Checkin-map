@@ -3,11 +3,13 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
+import { OnboardingNavigator } from './OnboardingNavigator';
 import { useAuth } from '@/contexts/AuthContext';
+import { isProfileComplete } from '@/services/userService';
 import { theme } from '@/theme';
 
 export function RootNavigator() {
-  const { user, initializing } = useAuth();
+  const { user, profile, initializing } = useAuth();
 
   if (initializing) {
     return (
@@ -17,11 +19,16 @@ export function RootNavigator() {
     );
   }
 
-  return (
-    <NavigationContainer>
-      {user ? <MainNavigator /> : <AuthNavigator />}
-    </NavigationContainer>
-  );
+  let stack: React.ReactNode;
+  if (!user) {
+    stack = <AuthNavigator />;
+  } else if (!isProfileComplete(profile)) {
+    stack = <OnboardingNavigator />;
+  } else {
+    stack = <MainNavigator />;
+  }
+
+  return <NavigationContainer>{stack}</NavigationContainer>;
 }
 
 const styles = StyleSheet.create({

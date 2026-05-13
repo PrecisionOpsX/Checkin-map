@@ -30,8 +30,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [initializing, setInitializing] = useState(true);
 
   const loadProfile = async (uid: string) => {
-    const p = await getUserProfile(uid);
-    setProfile(p);
+    try {
+      const p = await getUserProfile(uid);
+      setProfile(p);
+    } catch (e) {
+      console.warn('Failed to load user profile', e);
+      setProfile(null);
+    }
   };
 
   useEffect(() => {

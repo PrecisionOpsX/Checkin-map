@@ -34,17 +34,26 @@ export function UserProfileScreen({ route, navigation }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [p, h] = await Promise.all([
-      getUserProfile(userId),
-      listUserCheckinHistory(userId, 10),
-    ]);
-    setProfile(p);
-    setHistory(h);
-    if (user && user.uid !== userId) {
-      const f = await isFollowing(user.uid, userId);
-      setFollowing(f);
+    try {
+      const [p, h] = await Promise.all([
+        getUserProfile(userId).catch(() => null),
+        listUserCheckinHistory(userId, 10).catch(() => []),
+      ]);
+      setProfile(p);
+      setHistory(h);
+      if (user && user.uid !== userId) {
+        try {
+          const f = await isFollowing(user.uid, userId);
+          setFollowing(f);
+        } catch (e) {
+          console.warn('Failed to check follow status', e);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load user profile', e);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [userId, user]);
 
   useFocusEffect(

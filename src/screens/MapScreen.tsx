@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { useFocusEffect } from '@react-navigation/native';
@@ -46,13 +47,16 @@ export function MapScreen({ navigation }: Props) {
   };
 
   const load = useCallback(async () => {
-    const [locs, c] = await Promise.all([
-      listLocations(),
-      getActiveCountsByLocation().catch(() => ({})),
-    ]);
-    setLocations(locs);
-    setCounts(c);
-    setLoadingMap(false);
+    try {
+      const [locs, c] = await Promise.all([
+        listLocations().catch(() => []),
+        getActiveCountsByLocation().catch(() => ({})),
+      ]);
+      setLocations(locs);
+      setCounts(c);
+    } finally {
+      setLoadingMap(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -110,7 +114,10 @@ export function MapScreen({ navigation }: Props) {
         ) : (
           <MapView
             ref={mapRef}
-            provider={PROVIDER_GOOGLE}
+            // On iOS we let it default to Apple Maps (no key needed).
+            // On Android we use Google Maps. In Expo Go this works out of
+            // the box; on real builds it requires a Google Maps API key.
+            provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
             style={StyleSheet.absoluteFillObject}
             initialRegion={initialRegion}
             showsUserLocation

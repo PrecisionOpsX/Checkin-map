@@ -30,10 +30,19 @@ export function MyProfileScreen({ navigation }: Props) {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    await refreshProfile();
+    try {
+      await refreshProfile();
+    } catch (e) {
+      console.warn('Failed to refresh profile', e);
+    }
     if (profile?.uid) {
-      const h = await listUserCheckinHistory(profile.uid, 10);
-      setHistory(h);
+      try {
+        const h = await listUserCheckinHistory(profile.uid, 10);
+        setHistory(h);
+      } catch (e) {
+        console.warn('Failed to load check-in history', e);
+        setHistory([]);
+      }
     }
   }, [profile?.uid]);
 

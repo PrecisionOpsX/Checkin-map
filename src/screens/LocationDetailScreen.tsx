@@ -51,17 +51,24 @@ export function LocationDetailScreen({ route, navigation }: Props) {
   const load = useCallback(async () => {
     if (!locationId) return;
     setLoading(true);
-    const [l, v] = await Promise.all([
-      getLocation(locationId),
-      listVisitors(locationId),
-    ]);
-    setLoc(l);
-    setVisitors(v);
-    if (user) {
-      const active = await getActiveCheckinForUser(user.uid);
-      setActiveCheckin(active && active.locationId === locationId ? active : null);
+    try {
+      const [l, v] = await Promise.all([
+        getLocation(locationId).catch(() => null),
+        listVisitors(locationId).catch(() => []),
+      ]);
+      setLoc(l);
+      setVisitors(v);
+      if (user) {
+        try {
+          const active = await getActiveCheckinForUser(user.uid);
+          setActiveCheckin(active && active.locationId === locationId ? active : null);
+        } catch (e) {
+          console.warn('Failed to load active check-in', e);
+        }
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [locationId, user]);
 
   useFocusEffect(

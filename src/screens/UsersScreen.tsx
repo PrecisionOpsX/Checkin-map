@@ -27,10 +27,24 @@ export function UsersScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const load = useCallback(async () => {
-    const all = await listUsers(100);
-    setUsers(all.filter((u) => u.uid !== user?.uid));
-    setLoading(false);
+    setErrorMsg(null);
+    try {
+      const all = await listUsers(100);
+      setUsers(all.filter((u) => u.uid !== user?.uid));
+    } catch (e: any) {
+      console.warn('Failed to load users', e);
+      setUsers([]);
+      setErrorMsg(
+        e?.code === 'permission-denied'
+          ? 'Could not load users. Check your Firestore security rules are published.'
+          : 'Could not load users. Pull down to retry.'
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useFocusEffect(
@@ -84,9 +98,11 @@ export function UsersScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>No other users yet</Text>
+            <Text style={styles.emptyTitle}>
+              {errorMsg ? 'Could not load users' : 'No other users yet'}
+            </Text>
             <Text style={styles.emptyBody}>
-              Invite a friend to join so you can follow each other.
+              {errorMsg ?? 'Invite a friend to join so you can follow each other.'}
             </Text>
           </View>
         }

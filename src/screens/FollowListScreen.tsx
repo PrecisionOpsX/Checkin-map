@@ -26,13 +26,19 @@ export function FollowListScreen({ route, navigation }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const ids =
-      mode === 'followers'
-        ? await listFollowers(userId)
-        : await listFollowing(userId);
-    const results = await Promise.all(ids.map((id) => getUserProfile(id)));
-    setProfiles(results.filter((p): p is UserProfile => p !== null));
-    setLoading(false);
+    try {
+      const ids =
+        mode === 'followers'
+          ? await listFollowers(userId)
+          : await listFollowing(userId);
+      const results = await Promise.all(ids.map((id) => getUserProfile(id)));
+      setProfiles(results.filter((p): p is UserProfile => p !== null));
+    } catch (e) {
+      console.warn('Failed to load follow list', e);
+      setProfiles([]);
+    } finally {
+      setLoading(false);
+    }
   }, [userId, mode]);
 
   useFocusEffect(
